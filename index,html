@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Fetcher Engine</title>
+    <style>
+        :root {
+            --bg-color: #0d0e12;
+            --card-bg: #161722;
+            --accent: #00ff88;
+            --accent-hover: #00e577;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+            --border: #26293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 550px;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            text-align: center;
+            background: linear-gradient(45deg, #00ff88, #00bcff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-sub);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 16px;
+            background: #090a0f;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.15);
+        }
+
+        select {
+            padding: 0 15px;
+            background: #090a0f;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Features/Formats Grid */
+        .info-section {
+            margin-top: 30px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+        }
+
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tag {
+            background: #1e2235;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .tag.platform { border: 1px solid #3b4260; }
+        .tag.format { border: 1px solid rgba(0, 255, 136, 0.3); color: var(--accent); }
+
+        #status-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            display: none;
+            text-align: center;
+        }
+        .status-loading { background: rgba(0, 188, 255, 0.1); color: #00bcff; }
+        .status-success { background: rgba(0, 255, 136, 0.1); color: var(--accent); }
+        .status-error { background: rgba(255, 75, 75, 0.1); color: #ff4b4b; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h1>Media Engine</h1>
+        <div class="subtitle">Extract video files instantly from across the web.</div>
+        
+        <div class="input-group">
+            <input type="text" id="video-url" placeholder="Paste link here..." autocomplete="off">
+            <select id="video-format">
+                <option value="mp4">MP4 (Video)</option>
+                <option value="mp3">MP3 (Audio)</option>
+            </select>
+        </div>
+        
+        <button id="download-btn" onclick="processMedia()">Process & Download</button>
+        
+        <div id="status-box"></div>
+
+        <div class="info-section">
+            <div class="section-title">Supported Networks</div>
+            <div class="tag-container">
+                <span class="tag platform">🔴 YouTube</span>
+                <span class="tag platform">🧡 Reddit</span>
+                <span class="tag platform">🟣 Twitch</span>
+                <span class="tag platform">❌ Twitter / X</span>
+            </div>
+
+            <div class="section-title">Allowed Formats</div>
+            <div class="tag-container">
+                <span class="tag format">MP4 (Video High-Res)</span>
+                <span class="tag format">MP3 (Audio Extraction 320kbps)</span>
+                <span class="tag format">M4A (AAC Audio Quality)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE THIS WITH YOUR LIVE BACKEND URL ONCE DEPLOYED
+        const BACKEND_URL = "http://127.0.0.1:5000"; 
+
+        async function processMedia() {
+            const urlInput = document.getElementById('video-url').value.trim();
+            const formatSelection = document.getElementById('video-format').value;
+            const btn = document.getElementById('download-btn');
+            const statusBox = document.getElementById('status-box');
+            
+            if (!urlInput) {
+                updateStatus('Please input a valid URL link.', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = 'Extracting metadata...';
+            updateStatus('Server is processing content options. Hold tight...', 'loading');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/download`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput, format: formatSelection })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus(`Success! File parsed as target schema.<br><strong>${data.filename}</strong>`, 'success');
+                } else {
+                    updateStatus(`Engine Error: ${data.error}`, 'error');
+                }
+            } catch (err) {
+                updateStatus('Backend offline or blocking cross-origin connection rules.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Process & Download';
+            }
+        }
+
+        function updateStatus(text, type) {
+            statusBox.style.display = 'block';
+            statusBox.className = `status-${type}`;
+            statusBox.innerHTML = text;
+        }
+    </script>
+</body>
+</html>
